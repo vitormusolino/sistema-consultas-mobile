@@ -1,229 +1,182 @@
-import React from "react";
-import { View, Text, StyleSheet, Button } from "react-native";
+/**
+ * Componente Card de Consulta
+ * Exibe informações de uma consulta com ações disponíveis
+ */
 
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Consulta } from "../interfaces/consulta";
+import { formatarData, formatarHorario, obterCorStatus, obterTextoStatus } from "../utils/formatters";
 
 type ConsultaCardProps = {
-  consulta: Consulta;
-  
-  onConfirmar?: () => void;
-  
-  onCancelar?: () => void;
+ consulta: Consulta;
+ onConfirmar?: (id: number) => void;
+ onCancelar?: (id: number) => void;
+ onDetalhes?: (id: number) => void;
 };
 
-
 export default function ConsultaCard({
-  consulta,
-  onConfirmar,
-  onCancelar,
+ consulta,
+ onConfirmar,
+ onCancelar,
+ onDetalhes,
 }: ConsultaCardProps) {
-  
-  
-  function formatarValor(valor: number): string {
-    return valor.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  }
+ const corStatus = obterCorStatus(consulta.status);
 
-  function formatarData(data: Date): string {
-    return data.toLocaleDateString("pt-BR");
-  }
+ return (
+ <View style={styles.card}>
+ {/* Cabeçalho com Status */}
+ <View style={[styles.statusBadge, { backgroundColor: corStatus }]}>
+ <Text style={styles.statusTexto}>
+ {obterTextoStatus(consulta.status)}
+ </Text>
+ </View>
 
- 
-  return (
-    <View style={styles.card}>
-      
-      <View
-        style={[
-          styles.statusBadge,
-          consulta.status === "confirmada" && styles.statusConfirmada,
-          consulta.status === "cancelada" && styles.statusCancelada,
-        ]}
-      >
-        <Text style={styles.statusTexto}>
-          {consulta.status.toUpperCase()}
-        </Text>
-      </View>
+ {/* Informações Principais */}
+ <View style={styles.info}>
+ <Text style={styles.label}>Paciente:</Text>
+ <Text style={styles.valor}>{consulta.pacienteNome}</Text>
+ </View>
 
-      <View style={styles.secao}>
-        <Text style={styles.label}>👨‍⚕️ Médico</Text>
-        <Text style={styles.valor}>{consulta.medico.nome}</Text>
-        <Text style={styles.info}>CRM: {consulta.medico.crm}</Text>
-        <Text style={styles.info}>{consulta.medico.especialidade.nome}</Text>
-      </View>
+ <View style={styles.info}>
+ <Text style={styles.label}>Médico:</Text>
+ <Text style={styles.valor}>{consulta.medicoNome}</Text>
+ </View>
 
-      
-      <View style={styles.secao}>
-        <Text style={styles.label}>👤 Paciente</Text>
-        <Text style={styles.valor}>{consulta.paciente.nome}</Text>
-        <Text style={styles.info}>CPF: {consulta.paciente.cpf}</Text>
-        <Text style={styles.info}>Email: {consulta.paciente.email}</Text>
-        {consulta.paciente.telefone && (
-          <Text style={styles.info}>Tel: {consulta.paciente.telefone}</Text>
-        )}
-      </View>
+ <View style={styles.info}>
+ <Text style={styles.label}>Especialidade:</Text>
+ <Text style={styles.valor}>{consulta.especialidade}</Text>
+ </View>
 
-      
-      <View style={styles.secao}>
-        <Text style={styles.label}>📅 Dados da Consulta</Text>
-        <Text style={styles.valor}>Data: {formatarData(consulta.data)}</Text>
-        <Text style={styles.valor}>
-          Valor: {formatarValor(consulta.valor)}
-        </Text>
-        {consulta.observacoes && (
-          <Text style={styles.observacoes}>{consulta.observacoes}</Text>
-        )}
-      </View>
+ <View style={styles.row}>
+ <View style={[styles.info, { flex: 1 }]}>
+ <Text style={styles.label}>Data:</Text>
+ <Text style={styles.valor}>{formatarData(consulta.data)}</Text>
+ </View>
+ <View style={[styles.info, { flex: 1 }]}>
+ <Text style={styles.label}>Horário:</Text>
+ <Text style={styles.valor}>{formatarHorario(consulta.horario)}</Text>
+ </View>
+ </View>
 
-      <View style={styles.acoes}>
-        {consulta.status === "agendada" && (
-          <>
-            {onConfirmar && (
-              <View style={styles.botaoContainer}>
-                <Button
-                  title="Confirmar Consulta"
-                  onPress={onConfirmar}
-                  color="#4CAF50"
-                />
-              </View>
-            )}
-            {onCancelar && (
-              <View style={styles.botaoContainer}>
-                <Button
-                  title="Cancelar Consulta"
-                  onPress={onCancelar}
-                  color="#F44336"
-                />
-              </View>
-            )}
-          </>
-        )}
+ {consulta.observacoes && (
+ <View style={styles.info}>
+ <Text style={styles.label}>Observações:</Text>
+ <Text style={styles.valorSecundario}>{consulta.observacoes}</Text>
+ </View>
+ )}
 
-      
-        {consulta.status === "confirmada" && (
-          <View style={styles.mensagem}>
-            <Text style={styles.mensagemTexto}>
-              ✓ Consulta confirmada com sucesso!
-            </Text>
-          </View>
-        )}
+ {/* Botões de Ação */}
+ <View style={styles.acoes}>
+ {consulta.status === "agendada" && onConfirmar && (
+ <TouchableOpacity
+ style={[styles.botao, styles.botaoConfirmar]}
+ onPress={() => onConfirmar(consulta.id)}
+ >
+ <Text style={styles.botaoTexto}>Confirmar</Text>
+ </TouchableOpacity>
+ )}
 
-        {consulta.status === "cancelada" && (
-          <View style={styles.mensagemCancelada}>
-            <Text style={styles.mensagemTexto}>✗ Consulta cancelada</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
+ {(consulta.status === "agendada" || consulta.status === "confirmada") &&
+ onCancelar && (
+ <TouchableOpacity
+ style={[styles.botao, styles.botaoCancelar]}
+ onPress={() => onCancelar(consulta.id)}
+ >
+ <Text style={styles.botaoTexto}>Cancelar</Text>
+ </TouchableOpacity>
+ )}
+
+ {onDetalhes && (
+ <TouchableOpacity
+ style={[styles.botao, styles.botaoDetalhes]}
+ onPress={() => onDetalhes(consulta.id)}
+ >
+ <Text style={styles.botaoTextoSecundario}>Ver Detalhes</Text>
+ </TouchableOpacity>
+ )}
+ </View>
+ </View>
+ );
 }
 
 const styles = StyleSheet.create({
-  // Container principal do card
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    // Sombra no iOS
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    // Sombra no Android
-    elevation: 5,
-  },
-  
-  // Badge de status (agendada, confirmada, cancelada)
-  statusBadge: {
-    backgroundColor: "#FFA500", // Laranja (padrão para "agendada")
-    alignSelf: "flex-start",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 20,
-  },
-  statusConfirmada: {
-    backgroundColor: "#4CAF50", // Verde
-  },
-  statusCancelada: {
-    backgroundColor: "#F44336", // Vermelho
-  },
-  statusTexto: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-  
-  // Seções do card (médico, paciente, dados)
-  secao: {
-    marginBottom: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  
-  // Labels das seções (👨‍⚕️ Médico, 👤 Paciente, etc)
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#79059C",
-    marginBottom: 8,
-  },
-  
-  // Valores exibidos (nome do médico, nome do paciente, etc)
-  valor: {
-    fontSize: 18,
-    color: "#333",
-    marginBottom: 4,
-  },
-  
-  // Informações complementares (CRM, CPF, email, etc)
-  info: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 2,
-  },
-  
-  // Observações (texto em itálico)
-  observacoes: {
-    fontSize: 14,
-    color: "#555",
-    fontStyle: "italic",
-    marginTop: 8,
-  },
-  
-  // Container das ações (botões e mensagens)
-  acoes: {
-    marginTop: 10,
-  },
-  
-  // Espaçamento entre botões
-  botaoContainer: {
-    marginBottom: 12,
-  },
-  
-  // Mensagem de sucesso (verde)
-  mensagem: {
-    backgroundColor: "#E8F5E9",
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: "#4CAF50",
-  },
-  
-  // Mensagem de cancelamento (vermelho)
-  mensagemCancelada: {
-    backgroundColor: "#FFEBEE",
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: "#F44336",
-  },
-  mensagemTexto: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "600",
-    textAlign: "center",
-  },
+ card: {
+ backgroundColor: "#fff",
+ borderRadius: 12,
+ padding: 16,
+ marginVertical: 8,
+ marginHorizontal: 16,
+ boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+ elevation: 3,
+ },
+ statusBadge: {
+ alignSelf: "flex-start",
+ paddingHorizontal: 12,
+ paddingVertical: 6,
+ borderRadius: 16,
+ marginBottom: 12,
+ },
+ statusTexto: {
+ color: "#fff",
+ fontWeight: "bold",
+ fontSize: 12,
+ textTransform: "uppercase",
+ },
+ info: {
+ marginBottom: 8,
+ },
+ row: {
+ flexDirection: "row",
+ gap: 12,
+ },
+ label: {
+ fontSize: 12,
+ color: "#666",
+ marginBottom: 2,
+ },
+ valor: {
+ fontSize: 16,
+ color: "#333",
+ fontWeight: "600",
+ },
+ valorSecundario: {
+ fontSize: 14,
+ color: "#555",
+ fontStyle: "italic",
+ },
+ acoes: {
+ flexDirection: "row",
+ flexWrap: "wrap",
+ gap: 8,
+ marginTop: 12,
+ },
+ botao: {
+ paddingHorizontal: 16,
+ paddingVertical: 10,
+ borderRadius: 8,
+ minWidth: 100,
+ alignItems: "center",
+ },
+ botaoConfirmar: {
+ backgroundColor: "#4CAF50",
+ },
+ botaoCancelar: {
+ backgroundColor: "#f44336",
+ },
+ botaoDetalhes: {
+ backgroundColor: "transparent",
+ borderWidth: 1,
+ borderColor: "#79059C",
+ },
+ botaoTexto: {
+ color: "#fff",
+ fontWeight: "bold",
+ fontSize: 14,
+ },
+ botaoTextoSecundario: {
+ color: "#79059C",
+ fontWeight: "bold",
+ fontSize: 14,
+ },
 });
