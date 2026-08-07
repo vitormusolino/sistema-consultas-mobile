@@ -2,8 +2,9 @@
  * ConsultasListScreen - Lista de Consultas
  * Exibe consultas filtradas por usuário (paciente vê só suas, admin vê todas)
  */
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 
-import React, { useState, useEffect } from "react";
 import {
  View,
  Text,
@@ -32,9 +33,11 @@ export default function ConsultasListScreen({
  const [refreshing, setRefreshing] = useState(false);
  const [filtroAtivo, setFiltroAtivo] = useState<StatusConsulta | "todas">("todas");
 
- useEffect(() => {
- carregarConsultas();
- }, []);
+useFocusEffect(
+    useCallback(() => {
+        carregarConsultas();
+        }, [usuario?.id])
+);
 
  async function carregarConsultas() {
  setLoading(true);
