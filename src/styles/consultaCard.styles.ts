@@ -1,14 +1,15 @@
 import { StyleSheet } from "react-native";
- 
+
 export const styles = StyleSheet.create({
   card: {
-  backgroundColor: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  marginVertical: 8,
-  marginHorizontal: 16,
-  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-  elevation: 3,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   statusBadge: {
     backgroundColor: "#FFA500",
@@ -83,4 +84,4 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-})
+});

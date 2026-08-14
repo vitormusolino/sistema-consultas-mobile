@@ -3,6 +3,7 @@ import { Especialidade } from "../types/especialidade";
 import { Medico } from "../interfaces/medico";
 import { Consulta } from "../interfaces/consulta";
 
+// Chaves simples
 const KEYS = {
   ESPECIALIDADES: "@consultas:especialidades",
   MEDICOS: "@consultas:medicos",
@@ -10,7 +11,6 @@ const KEYS = {
 };
 
 // ========== ESPECIALIDADES ==========
-
 export async function salvarEspecialidades(especialidades: Especialidade[]) {
   try {
     await AsyncStorage.setItem(
@@ -33,7 +33,6 @@ export async function obterEspecialidades(): Promise<Especialidade[]> {
 }
 
 // ========== MÉDICOS ==========
-
 export async function salvarMedicos(medicos: Medico[]) {
   try {
     await AsyncStorage.setItem(KEYS.MEDICOS, JSON.stringify(medicos));
@@ -53,7 +52,6 @@ export async function obterMedicos(): Promise<Medico[]> {
 }
 
 // ========== CONSULTAS ==========
-
 export async function salvarConsultas(consultas: Consulta[]) {
   try {
     await AsyncStorage.setItem(KEYS.CONSULTAS, JSON.stringify(consultas));
@@ -67,7 +65,6 @@ export async function obterConsultas(): Promise<Consulta[]> {
     const dados = await AsyncStorage.getItem(KEYS.CONSULTAS);
     if (dados) {
       const consultas = JSON.parse(dados);
-      // Reconverte strings de data para objetos Date
       return consultas.map((c: any) => ({
         ...c,
         data: new Date(c.data),
