@@ -1,22 +1,28 @@
 /**
  * Consultas Service
  * Gerencia operações relacionadas a consultas com AsyncStorage
- * Filtra consultas baseado no usuário logado
+ * Filtra consultas baseado no perfil: admin (todas), paciente (suas), médico (da agenda)
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Consulta } from "../interfaces/consulta";
-import { StatusConsulta } from "../types/statusConsulta";
+
+export type OpcoesFiltroConsulta = {
+  usuarioId?: number;
+  isAdmin?: boolean;
+  isMedico?: boolean;
+  medicoId?: number;
+};
 
 class ConsultasService {
   /**
-   * Obtém todas as consultas do AsyncStorage
-   */
+  * Obtém todas as consultas do AsyncStorage
+  */
   private async obterTodasConsultas(): Promise<Consulta[]> {
     try {
       const consultasJSON = await AsyncStorage.getItem("@consultas");
       if (!consultasJSON) return [];
-      
+
       const consultas = JSON.parse(consultasJSON);
       return consultas;
     } catch (error) {
@@ -26,8 +32,8 @@ class ConsultasService {
   }
 
   /**
-   * Salva consultas no AsyncStorage
-   */
+  * Salva consultas no AsyncStorage
+  */
   private async salvarConsultas(consultas: Consulta[]): Promise<void> {
     try {
       await AsyncStorage.setItem("@consultas", JSON.stringify(consultas));
@@ -37,119 +43,162 @@ class ConsultasService {
     }
   }
 
+  private temPermissao(
+    consulta: Consulta,
+    opcoes: OpcoesFiltroConsulta
+  ): boolean {
+    if (opcoes.isAdmin) return true;
+    if (opcoes.isMedico && opcoes.medicoId != null) {
+      return consulta.medicoId === opcoes.medicoId;
+    }
+    if (opcoes.usuarioId != null) {
+      return consulta.usuarioId === opcoes.usuarioId;
+    }
+    return false;
+  }
+
   /**
-   * Lista consultas filtradas por usuário (pacientes veem só as suas, admin vê todas)
-   */
-  async listarConsultas(usuarioId?: number, isAdmin: boolean = false): Promise<Consulta[]> {
+  * Lista consultas filtradas por perfil
+  * - Admin: todas
+  * - Médico: apenas consultas com o mesmo medicoId
+  * - Paciente: apenas as que ele agendou (usuarioId)
+  */
+  async listarConsultas(
+    usuarioId?: number,
+    isAdmin: boolean = false,
+    isMedico: boolean = false,
+    medicoId?: number
+  ): Promise<Consulta[]> {
     const todasConsultas = await this.obterTodasConsultas();
-    
-    // Admin vê todas as consultas
+
     if (isAdmin) {
       return todasConsultas;
     }
-    
-    // Paciente vê apenas suas consultas
+
+    if (isMedico && medicoId != null) {
+      return todasConsultas.filter((c) => c.medicoId === medicoId);
+    }
+
     if (usuarioId) {
       return todasConsultas.filter((c) => c.usuarioId === usuarioId);
     }
-    
+
     return [];
   }
 
   /**
-   * Obtém uma consulta específica por ID
-   * Verifica se o usuário tem permissão para ver a consulta
-   */
+  * Obtém uma consulta específica por ID
+  * Verifica se o usuário tem permissão para ver a consulta
+  */
   async obterConsulta(
     id: number,
     usuarioId?: number,
-    isAdmin: boolean = false
+    isAdmin: boolean = false,
+    isMedico: boolean = false,
+    medicoId?: number
   ): Promise<Consulta> {
     const todasConsultas = await this.obterTodasConsultas();
     const consulta = todasConsultas.find((c) => c.id === id);
-    
+
     if (!consulta) {
       throw new Error("Consulta não encontrada");
     }
-    
-    // Verifica permissão
-    if (!isAdmin && consulta.usuarioId !== usuarioId) {
+
+    if (
+      !this.temPermissao(consulta, { usuarioId, isAdmin, isMedico, medicoId })
+    ) {
       throw new Error("Você não tem permissão para visualizar esta consulta");
     }
-    
+
     return consulta;
   }
 
   /**
-   * Cria uma nova consulta associada ao usuário logado
-   */
+  * Cria uma nova consulta associada ao usuário logado
+  */
   async criarConsulta(consultaData: Omit<Consulta, "id">): Promise<Consulta> {
     const todasConsultas = await this.obterTodasConsultas();
-    
+
     const novaConsulta: Consulta = {
       ...consultaData,
       id: Date.now(), // Usa timestamp como ID
     };
-    
+
     todasConsultas.push(novaConsulta);
     await this.salvarConsultas(todasConsultas);
-    
+
     return novaConsulta;
   }
 
   /**
-   * Atualiza o status de uma consulta para "confirmada"
-   */
+  * Atualiza o status de uma consulta para "confirmada"
+  */
   async confirmarConsulta(
     id: number,
     usuarioId?: number,
-    isAdmin: boolean = false
+    isAdmin: boolean = false,
+    isMedico: boolean = false,
+    medicoId?: number
   ): Promise<Consulta> {
     const todasConsultas = await this.obterTodasConsultas();
     const index = todasConsultas.findIndex((c) => c.id === id);
-    
+
     if (index === -1) {
       throw new Error("Consulta não encontrada");
     }
-    
-    // Verifica permissão
-    if (!isAdmin && todasConsultas[index].usuarioId !== usuarioId) {
+
+    if (
+      !this.temPermissao(todasConsultas[index], {
+        usuarioId,
+        isAdmin,
+        isMedico,
+        medicoId,
+      })
+    ) {
       throw new Error("Você não tem permissão para modificar esta consulta");
     }
-    
+
     if (todasConsultas[index].status !== "agendada") {
       throw new Error("Apenas consultas agendadas podem ser confirmadas");
     }
-    
+
     todasConsultas[index] = {
       ...todasConsultas[index],
       status: "confirmada",
     };
-    
+
     await this.salvarConsultas(todasConsultas);
     return todasConsultas[index];
   }
 
   /**
-   * Atualiza o status de uma consulta para "cancelada"
-   */
+  * Atualiza o status de uma consulta para "cancelada"
+  */
   async cancelarConsulta(
     id: number,
     usuarioId?: number,
-    isAdmin: boolean = false
+    isAdmin: boolean = false,
+    isMedico: boolean = false,
+    medicoId?: number
   ): Promise<Consulta> {
     const todasConsultas = await this.obterTodasConsultas();
     const index = todasConsultas.findIndex((c) => c.id === id);
-    
+
     if (index === -1) {
       throw new Error("Consulta não encontrada");
     }
-    
-    // Verifica permissão
-    if (!isAdmin && todasConsultas[index].usuarioId !== usuarioId) {
+
+    if (
+      !this.temPermissao(todasConsultas[index], {
+        usuarioId,
+        isAdmin,
+        isMedico,
+        medicoId,
+      })
+    ) {
       throw new Error("Você não tem permissão para modificar esta consulta");
     }
-    
+
     if (
       todasConsultas[index].status !== "agendada" &&
       todasConsultas[index].status !== "confirmada"
@@ -158,19 +207,19 @@ class ConsultasService {
         "Apenas consultas agendadas ou confirmadas podem ser canceladas"
       );
     }
-    
+
     todasConsultas[index] = {
       ...todasConsultas[index],
       status: "cancelada",
     };
-    
+
     await this.salvarConsultas(todasConsultas);
     return todasConsultas[index];
   }
 
   /**
-   * Atualiza o status de uma consulta para "realizada" (apenas admin)
-   */
+  * Atualiza o status de uma consulta para "realizada" (apenas admin)
+  */
   async realizarConsulta(id: number, isAdmin: boolean = false): Promise<Consulta> {
     if (!isAdmin) {
       throw new Error("Apenas administradores podem marcar consultas como realizadas");
@@ -178,27 +227,27 @@ class ConsultasService {
 
     const todasConsultas = await this.obterTodasConsultas();
     const index = todasConsultas.findIndex((c) => c.id === id);
-    
+
     if (index === -1) {
       throw new Error("Consulta não encontrada");
     }
-    
+
     if (todasConsultas[index].status !== "confirmada") {
       throw new Error("Apenas consultas confirmadas podem ser realizadas");
     }
-    
+
     todasConsultas[index] = {
       ...todasConsultas[index],
       status: "realizada",
     };
-    
+
     await this.salvarConsultas(todasConsultas);
     return todasConsultas[index];
   }
 
   /**
-   * Deleta uma consulta (apenas admin)
-   */
+  * Deleta uma consulta (apenas admin)
+  */
   async deletarConsulta(id: number, isAdmin: boolean = false): Promise<void> {
     if (!isAdmin) {
       throw new Error("Apenas administradores podem deletar consultas");
@@ -210,16 +259,16 @@ class ConsultasService {
   }
 }
 
-// Consultas iniciais para teste (associadas aos usuários de teste)
+// Consultas iniciais alinhadas aos médicos do mock (medicosMock / NovaConsulta)
 const CONSULTAS_INICIAIS: Consulta[] = [
   {
     id: 1,
     pacienteId: 2,
     pacienteNome: "João Silva",
     medicoId: 1,
-    medicoNome: "Dr. Carlos Mendes",
+    medicoNome: "Dr. Roberto Silva",
     especialidade: "Cardiologia",
-    usuarioId: 2, // João Silva
+    usuarioId: 2,
     data: "2026-04-25",
     horario: "14:00",
     status: "agendada",
@@ -230,10 +279,10 @@ const CONSULTAS_INICIAIS: Consulta[] = [
     id: 2,
     pacienteId: 2,
     pacienteNome: "João Silva",
-    medicoId: 2,
-    medicoNome: "Dra. Ana Paula",
+    medicoId: 3,
+    medicoNome: "Dr. João Pereira",
     especialidade: "Ortopedia",
-    usuarioId: 2, // João Silva
+    usuarioId: 2,
     data: "2026-04-28",
     horario: "10:30",
     status: "confirmada",
@@ -244,10 +293,10 @@ const CONSULTAS_INICIAIS: Consulta[] = [
     id: 3,
     pacienteId: 3,
     pacienteNome: "Maria Santos",
-    medicoId: 3,
-    medicoNome: "Dr. Roberto Lima",
+    medicoId: 2,
+    medicoNome: "Dra. Maria Santos",
     especialidade: "Dermatologia",
-    usuarioId: 3, // Maria Santos
+    usuarioId: 3,
     data: "2026-04-30",
     horario: "09:00",
     status: "agendada",
@@ -259,9 +308,9 @@ const CONSULTAS_INICIAIS: Consulta[] = [
     pacienteId: 3,
     pacienteNome: "Maria Santos",
     medicoId: 4,
-    medicoNome: "Dra. Juliana Costa",
+    medicoNome: "Dra. Ana Costa",
     especialidade: "Clínica Geral",
-    usuarioId: 3, // Maria Santos
+    usuarioId: 3,
     data: "2026-05-05",
     horario: "15:00",
     status: "confirmada",
@@ -273,9 +322,9 @@ const CONSULTAS_INICIAIS: Consulta[] = [
     pacienteId: 2,
     pacienteNome: "João Silva",
     medicoId: 5,
-    medicoNome: "Dr. Fernando Alves",
+    medicoNome: "Dr. Paulo Oliveira",
     especialidade: "Psiquiatria",
-    usuarioId: 2, // João Silva
+    usuarioId: 2,
     data: "2026-04-20",
     horario: "11:00",
     status: "realizada",
@@ -290,7 +339,7 @@ const CONSULTAS_INICIAIS: Consulta[] = [
 export async function inicializarConsultas(): Promise<void> {
   try {
     const consultasExistentes = await AsyncStorage.getItem("@consultas");
-    
+
     if (!consultasExistentes) {
       await AsyncStorage.setItem("@consultas", JSON.stringify(CONSULTAS_INICIAIS));
       console.log("✅ Consultas iniciais criadas");

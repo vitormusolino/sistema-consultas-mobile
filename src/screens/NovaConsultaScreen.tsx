@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import consultasService from "../services/consultasService";
+import { medicosSelectMock } from "../services/mockData";
 
 // ─── Tipos locais ─────────────────────────────────────────────────────────────
 
@@ -46,14 +47,7 @@ const ESPECIALIDADES: Especialidade[] = [
   "Psiquiatria",
 ];
 
-const MEDICOS: Medico[] = [
-  { id: 1, nome: "Dr. Roberto Silva", especialidade: "Cardiologia" },
-  { id: 2, nome: "Dra. Maria Santos", especialidade: "Dermatologia" },
-  { id: 3, nome: "Dr. João Pereira", especialidade: "Ortopedia" },
-  { id: 4, nome: "Dra. Ana Costa", especialidade: "Clínica Geral" },
-  { id: 5, nome: "Dr. Paulo Oliveira", especialidade: "Psiquiatria" },
-  { id: 6, nome: "Dra. Carla Lima", especialidade: "Pediatria" },
-];
+const MEDICOS: Medico[] = medicosSelectMock;
 
 const HORARIOS_DISPONIVEIS = [
   "08:00",

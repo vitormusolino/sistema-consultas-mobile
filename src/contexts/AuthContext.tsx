@@ -13,6 +13,7 @@ type AuthContextData = {
   login: (email: string, senha: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isAdmin: () => boolean;
+  isMedico: () => boolean;
 };
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -54,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(email: string, senha: string): Promise<boolean> {
     try {
       console.log("🔑 Tentando login com email:", email);
-      
+
       // Busca usuários cadastrados
       const usuariosJSON = await AsyncStorage.getItem("@usuarios");
       const usuarios: Usuario[] = usuariosJSON ? JSON.parse(usuariosJSON) : [];
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (usuarioEncontrado) {
         console.log("✅ Credenciais válidas para:", usuarioEncontrado.nome);
-        
+
         // Remove senha antes de salvar no contexto (segurança)
         const { senha: _, ...usuarioSemSenha } = usuarioEncontrado;
         const usuarioParaSalvar = usuarioSemSenha as Usuario;
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Salva no AsyncStorage PRIMEIRO
         await AsyncStorage.setItem("@usuario", JSON.stringify(usuarioParaSalvar));
         console.log("💾 Usuário salvo no AsyncStorage");
-        
+
         // Atualiza estado do contexto
         setUsuario(usuarioParaSalvar);
         console.log("🎯 Login concluído com sucesso!");
@@ -94,31 +95,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("🚪 Iniciando logout...");
       console.log("🔍 Usuário atual antes do logout:", usuario?.nome, usuario?.perfil);
-      
+
       // 1. Verifica se existe antes de remover
       const usuarioAntes = await AsyncStorage.getItem("@usuario");
       console.log("📦 @usuario ANTES da remoção:", usuarioAntes ? "EXISTE" : "NÃO EXISTE");
-      
+
       // 2. Remove do AsyncStorage - MÚLTIPLAS TENTATIVAS
       console.log("🗑️ Removendo @usuario do AsyncStorage...");
       await AsyncStorage.removeItem("@usuario");
-      
+
       // 3. Aguarda um pouco para garantir que foi removido
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // 4. VERIFICA se realmente foi removido
       const usuarioDepois = await AsyncStorage.getItem("@usuario");
       console.log("📦 @usuario DEPOIS da remoção:", usuarioDepois ? "⚠️ AINDA EXISTE!" : "✅ REMOVIDO");
-      
+
       // 5. Se ainda existe, tenta remover novamente com força
       if (usuarioDepois) {
         console.log("⚠️ TENTANDO REMOVER NOVAMENTE...");
         await AsyncStorage.removeItem("@usuario");
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         const verificacaoFinal = await AsyncStorage.getItem("@usuario");
         console.log("📦 Verificação FINAL:", verificacaoFinal ? "❌ FALHOU - AINDA EXISTE" : "✅ REMOVIDO");
-        
+
         // Última tentativa: limpar TODAS as chaves (emergência)
         if (verificacaoFinal) {
           console.log("🚨 EMERGÊNCIA: Tentando AsyncStorage.clear()...");
@@ -128,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("✅ multiRemove executado");
         }
       }
-      
+
       // 6. Limpa estado do contexto
       setUsuario(null);
       console.log("✅ Estado do contexto limpo");
@@ -144,8 +145,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return usuario?.perfil === "admin";
   }
 
+  function isMedico(): boolean {
+    return usuario?.perfil === "medico";
+  }
+
   return (
-    <AuthContext.Provider value={{ usuario, loading, login, logout, isAdmin }}>
+    <AuthContext.Provider
+      value={{ usuario, loading, login, logout, isAdmin, isMedico }}
+    >
       {children}
     </AuthContext.Provider>
   );

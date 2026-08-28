@@ -16,10 +16,10 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "../contexts/AuthContext";
-import { 
-  obterCredenciaisTeste, 
+import {
+  obterCredenciaisTeste,
   forcarLogoutCompleto,
-  limparTudoDoAsyncStorage 
+  limparTudoDoAsyncStorage
 } from "../services/authService";
 
 type LoginProps = {
@@ -42,7 +42,7 @@ export default function Login({ navigation }: LoginProps) {
     setLoading(true);
     try {
       const sucesso = await login(email.trim(), senha);
-      
+
       if (!sucesso) {
         Alert.alert("Erro", "Email ou senha inválidos");
       }
@@ -112,7 +112,7 @@ export default function Login({ navigation }: LoginProps) {
         <Text style={styles.icone}>🔑</Text>
         <Text style={styles.titulo}>Sistema de Consultas</Text>
         <Text style={styles.subtitulo}>Faça login para continuar</Text>
-        
+
         <View style={styles.formContainer}>
           <TextInput
             style={styles.input}
@@ -189,6 +189,23 @@ export default function Login({ navigation }: LoginProps) {
                   <Text style={styles.credencialTipo}>👤 {paciente.nome}</Text>
                   <Text style={styles.credencialTexto}>{paciente.email}</Text>
                   <Text style={styles.credencialTexto}>{paciente.senha}</Text>
+                </TouchableOpacity>
+              ))}
+
+              {credenciais.medicos.map((medico, index) => (
+                <TouchableOpacity
+                  key={`medico-${index}`}
+                  style={styles.credencialItem}
+                  onPress={() => preencherCredenciais(medico.email, medico.senha)}
+                >
+                  <Text style={styles.credencialTipo}>
+                    👨‍⚕️ {medico.nome}
+                  </Text>
+                  <Text style={styles.credencialTexto}>
+                    {medico.especialidade}
+                  </Text>
+                  <Text style={styles.credencialTexto}>{medico.email}</Text>
+                  <Text style={styles.credencialTexto}>{medico.senha}</Text>
                 </TouchableOpacity>
               ))}
             </View>
